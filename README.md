@@ -54,7 +54,6 @@ Edit `terraform/variables.tf.example` to contain your variables:
 
 ```bash
 cd terraform
-cp variables.tf.example variables.tf
 vim variables.tf
 ```
 
@@ -62,7 +61,7 @@ vim variables.tf
 
 ```bash
 terraform init
-terraform apply -var-file=variables.tf -auto-approve
+terraform apply -var-file=variables.tf.example -auto-approve
 ```
 
 Terraform creates a VPC, subnet, Internet gateway, security group (SSH & port 25565), and an EC2 instance. When complete, note the `minecraft_public_ip` output.
