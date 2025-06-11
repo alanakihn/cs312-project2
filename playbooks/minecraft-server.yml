@@ -1,0 +1,98 @@
+- name: Configure Minecraft Server
+  hosts: minecraft
+  become: true
+  vars:
+    minecraft_dir: /opt/minecraft
+    minecraft_user: minecraft
+    corretto_dir: /opt/java
+
+  pre_tasks:
+    - name: Install dependencies
+      raw: |
+        yum install -y python3 python3-pip jq wget tar curl
+    # Don't have EC2 use wrong python version
+    - name: Use Python3 for Ansible
+      set_fact:
+        ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - name: Ensure minecraft user exists
+      raw: id -u {{ minecraft_user }} || useradd -m -d {{ minecraft_dir }} -s /bin/bash {{ minecraft_user }}
+
+    # Need Java 21
+    - name: Install Corretto 21
+      raw: |
+        mkdir -p {{ corretto_dir }}
+        curl -sL https://corretto.aws/downloads/latest/amazon-corretto-21-x64-linux-jdk.tar.gz -o /tmp/corretto21.tar.gz
+        tar -xzf /tmp/corretto21.tar.gz -C {{ corretto_dir }}
+        ln -sfn {{ corretto_dir }}/amazon-corretto-21* {{ corretto_dir }}/latest
+        /usr/sbin/alternatives --install /usr/bin/java java {{ corretto_dir }}/latest/bin/java 20000
+
+    - name: Create Minecraft directory and set permissions
+      raw: |
+        mkdir -p {{ minecraft_dir }}
+        chown {{ minecraft_user }}:{{ minecraft_user }} {{ minecraft_dir }}
+        chmod 0755 {{ minecraft_dir }}
+
+    - name: Download Minecraft server JAR (version 1.21.5)
+      raw: |
+        # Remove any existing or empty JAR
+        rm -f {{ minecraft_dir }}/server.jar
+        # Make sure to get the right version of mincraft
+        # Until this step was really deconstructued the wrong version of minecraft kept being downloaded
+        VERSION="1.21.5"
+        MANIFEST_URL=https://launchermeta.mojang.com/mc/game/version_manifest.json
+        INFO_URL=$(curl -sL "$MANIFEST_URL" \
+          | jq -r '.versions[] | select(.id=="'"$VERSION"'") | .url')
+        DOWNLOAD_URL=$(curl -sL "$INFO_URL" \
+          | jq -r '.downloads.server.url')
+        # This download kept failing too early
+        wget --tries=3 --retry-connrefused -qO {{ minecraft_dir }}/server.jar "$DOWNLOAD_URL"
+        # Also this would just continue if server.jar was empty, and kept breaking
+        if [ ! -s {{ minecraft_dir }}/server.jar ]; then
+          echo "ERROR: server.jar is empty or failed to download" >&2
+          exit 1
+        fi
+        chown {{ minecraft_user }}:{{ minecraft_user }} {{ minecraft_dir }}/server.jar
+
+    - name: Create EULA file
+      raw: |
+        echo 'eula=true' > {{ minecraft_dir }}/eula.txt
+        chown {{ minecraft_user }}:{{ minecraft_user }} {{ minecraft_dir }}/eula.txt
+
+    - name: Create systemd service unit file
+      copy:
+        dest: /etc/systemd/system/minecraft.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Minecraft Server
+          After=network.target
+
+          [Service]
+          User={{ minecraft_user }}
+          Group={{ minecraft_user }}
+          WorkingDirectory={{ minecraft_dir }}
+          Environment="JAVA_HOME={{ corretto_dir }}/latest"
+          Environment="PATH={{ corretto_dir }}/latest/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+          ExecStart=/bin/sh -c '/opt/java/latest/bin/java -Xmx1G -Xms1G -jar /opt/minecraft/server.jar nogui'
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Minecraft service
+      systemd:
+        name: minecraft
+        state: started
+        enabled: yes
+
+    # Don't leave ansible script until it is actually working
+    - name: Wait for Minecraft port
+      wait_for:
+        host: 127.0.0.1
+        port: 25565
+        delay: 5
+        timeout: 60
