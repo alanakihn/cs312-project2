@@ -1,0 +1,17 @@
+# Terraform
+.terraform/
+terraform.tfstate.backup
+.terraform.lock.hcl
+variables.tf.vals
+terraform.tfstate*
+crash.log
+
+# Ansible
+inventory/hosts
+*.retry
+
+# OS files
+*.swp
+*.bak
+commands-to-run.txt
+README.md
