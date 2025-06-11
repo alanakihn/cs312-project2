@@ -54,7 +54,7 @@ Edit `terraform/variables.tf.example` to contain your variables:
 
 ```bash
 cd terraform
-vim variables.tf
+vim variables.tf.example
 ```
 
 ### 3. Provision Infrastructure
