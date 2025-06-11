@@ -87,7 +87,7 @@ vim inventory/hosts
 Run the playbook:
 
 ```bash
-ansible-playbook -i inventory/hosts playbooks/setup-minecraft.yml
+ansible-playbook -i inventory/hosts playbooks/minecraft-server.yml
 ```
 
 Ansible installs Corretto 21, downloads Minecraft 1.21.5, and enables a systemd service for Minecraft.
