@@ -1,3 +1,5 @@
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+
 terraform {
   required_version = ">= 1.0"
   required_providers {

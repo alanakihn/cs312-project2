@@ -20,6 +20,7 @@
       raw: id -u {{ minecraft_user }} || useradd -m -d {{ minecraft_dir }} -s /bin/bash {{ minecraft_user }}
 
     # Need Java 21
+    # https://docs.ansible.com/ansible/2.9/modules/raw_module.html
     - name: Install Corretto 21
       raw: |
         mkdir -p {{ corretto_dir }}
@@ -83,6 +84,7 @@
       systemd:
         daemon_reload: yes
 
+    # https://docs.ansible.com/ansible/2.9/modules/systemd_module.html
     - name: Enable and start Minecraft service
       systemd:
         name: minecraft

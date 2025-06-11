@@ -1,4 +1,5 @@
 // terraform/variables.tf
+// https://registry.terraform.io/providers/hashicorp/aws/latest/docs
 
 variable "aws_region" {
   description = "AWS region to deploy into"
